@@ -83,6 +83,13 @@
             <version>1.5</version>
         </dependency>
 
+        <!-- Jackson Modules -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.datatype</groupId>
+            <artifactId>jackson-datatype-hibernate5-jakarta</artifactId>
+            <version>2.15.2</version>
+        </dependency>
+
         <!-- Testing -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

@@ -73,6 +73,18 @@ public class MessageController {
             message.setIsRead(false);
             message.setSentAt(LocalDateTime.now());
             
+            // Set message type if provided
+            if (request.getMessageType() != null) {
+                try {
+                    message.setMessageType(Message.MessageType.valueOf(request.getMessageType()));
+                } catch (IllegalArgumentException e) {
+                    logger.warn("Invalid message type: {}, using default TEXT", request.getMessageType());
+                    message.setMessageType(Message.MessageType.TEXT);
+                }
+            } else {
+                message.setMessageType(Message.MessageType.TEXT);
+            }
+            
             if (request.getAppointmentId() != null) {
                 // Get and set appointment if provided
                 Optional<Appointment> appointmentOpt = appointmentRepository.findById(request.getAppointmentId());
@@ -111,6 +123,17 @@ public class MessageController {
             
             Long currentUserId = currentUserOpt.get().getId();
             List<Message> messages = messageRepository.findConversationBetweenUsers(currentUserId, userId);
+            
+            // Force loading of user information
+            messages.forEach(message -> {
+                // Access user properties to force loading
+                if (message.getSender() != null) {
+                    message.getSender().getFirstName();
+                }
+                if (message.getReceiver() != null) {
+                    message.getReceiver().getFirstName();
+                }
+            });
             
             logger.info("Found {} messages in conversation", messages.size());
             return ResponseEntity.ok(messages);
@@ -217,6 +240,17 @@ public class MessageController {
             // Get all messages sent by or received by the current user
             List<Message> allMessages = messageRepository.findMessagesByUser(currentUserId);
             
+            // Force loading of user information
+            allMessages.forEach(message -> {
+                // Access user properties to force loading
+                if (message.getSender() != null) {
+                    message.getSender().getFirstName();
+                }
+                if (message.getReceiver() != null) {
+                    message.getReceiver().getFirstName();
+                }
+            });
+            
             // Group by conversation partner
             Map<Long, List<Message>> conversationMap = new HashMap<>();
             
@@ -287,6 +321,7 @@ public class MessageController {
         private Long receiverId;
         private String content;
         private Long appointmentId;
+        private String messageType;
 
         // Getters and setters
         public Long getReceiverId() { return receiverId; }
@@ -297,5 +332,8 @@ public class MessageController {
         
         public Long getAppointmentId() { return appointmentId; }
         public void setAppointmentId(Long appointmentId) { this.appointmentId = appointmentId; }
+        
+        public String getMessageType() { return messageType; }
+        public void setMessageType(String messageType) { this.messageType = messageType; }
     }
 } 
