@@ -18,6 +18,9 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.Map;
+import java.util.HashMap;
+import java.util.ArrayList;
 
 @RestController
 @RequestMapping("/api/messages")
@@ -187,6 +190,95 @@ public class MessageController {
         } catch (Exception e) {
             logger.error("Error fetching appointment messages: ", e);
             return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    /**
+     * Get all conversation partners of the current user with latest messages
+     */
+    @GetMapping("/conversations")
+    @PreAuthorize("hasRole('PATIENT') or hasRole('DOCTOR')")
+    public ResponseEntity<?> getConversations() {
+        try {
+            logger.info("Fetching all conversations for current user");
+            
+            // Get current user
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            String currentUserEmail = auth.getName();
+            Optional<User> currentUserOpt = userRepository.findByEmail(currentUserEmail);
+            
+            if (currentUserOpt.isEmpty()) {
+                return ResponseEntity.badRequest().body("User not found");
+            }
+            
+            User currentUser = currentUserOpt.get();
+            Long currentUserId = currentUser.getId();
+            
+            // Get all messages sent by or received by the current user
+            List<Message> allMessages = messageRepository.findMessagesByUser(currentUserId);
+            
+            // Group by conversation partner
+            Map<Long, List<Message>> conversationMap = new HashMap<>();
+            
+            for (Message message : allMessages) {
+                Long partnerId;
+                
+                if (message.getSender().getId().equals(currentUserId)) {
+                    partnerId = message.getReceiver().getId();
+                } else {
+                    partnerId = message.getSender().getId();
+                }
+                
+                if (!conversationMap.containsKey(partnerId)) {
+                    conversationMap.put(partnerId, new ArrayList<>());
+                }
+                
+                conversationMap.get(partnerId).add(message);
+            }
+            
+            // Create response with conversation summaries
+            List<Map<String, Object>> conversations = new ArrayList<>();
+            
+            for (Map.Entry<Long, List<Message>> entry : conversationMap.entrySet()) {
+                Long partnerId = entry.getKey();
+                List<Message> messages = entry.getValue();
+                
+                // Sort messages by date (newest first)
+                messages.sort((m1, m2) -> m2.getSentAt().compareTo(m1.getSentAt()));
+                
+                // Get latest message
+                Message latestMessage = messages.get(0);
+                
+                // Get partner user
+                User partner = latestMessage.getSender().getId().equals(partnerId) 
+                    ? latestMessage.getSender() 
+                    : latestMessage.getReceiver();
+                
+                // Count unread messages
+                long unreadCount = messages.stream()
+                    .filter(m -> m.getReceiver().getId().equals(currentUserId) && !m.getIsRead())
+                    .count();
+                
+                Map<String, Object> conversation = new HashMap<>();
+                conversation.put("partner", partner);
+                conversation.put("latestMessage", latestMessage);
+                conversation.put("unreadCount", unreadCount);
+                
+                conversations.add(conversation);
+            }
+            
+            // Sort conversations by latest message date
+            conversations.sort((c1, c2) -> {
+                Message m1 = (Message) c1.get("latestMessage");
+                Message m2 = (Message) c2.get("latestMessage");
+                return m2.getSentAt().compareTo(m1.getSentAt());
+            });
+            
+            logger.info("Found {} conversations", conversations.size());
+            return ResponseEntity.ok(conversations);
+        } catch (Exception e) {
+            logger.error("Error fetching conversations: ", e);
+            return ResponseEntity.internalServerError().body("Failed to fetch conversations");
         }
     }
 

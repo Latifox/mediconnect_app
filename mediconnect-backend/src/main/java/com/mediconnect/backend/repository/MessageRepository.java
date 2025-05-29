@@ -38,4 +38,7 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
            "ELSE m.sender END " +
            "FROM Message m WHERE m.sender.id = :userId OR m.receiver.id = :userId")
     List<Object> findConversationPartners(@Param("userId") Long userId);
+
+    @Query("SELECT m FROM Message m WHERE m.sender.id = :userId OR m.receiver.id = :userId ORDER BY m.sentAt DESC")
+    List<Message> findMessagesByUser(@Param("userId") Long userId);
 } 
