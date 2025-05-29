@@ -49,8 +49,16 @@ public class JsonConfig {
         
         // Configure Hibernate5 module to handle lazy loading
         Hibernate5JakartaModule hibernate5Module = new Hibernate5JakartaModule();
+        
+        // Don't force lazy loading - let the controller handle it explicitly
         hibernate5Module.configure(Hibernate5JakartaModule.Feature.FORCE_LAZY_LOADING, false);
+        
+        // Use transient annotations
         hibernate5Module.configure(Hibernate5JakartaModule.Feature.USE_TRANSIENT_ANNOTATION, true);
+        
+        // Initialize the id for proxies
+        hibernate5Module.configure(Hibernate5JakartaModule.Feature.SERIALIZE_IDENTIFIER_FOR_LAZY_NOT_LOADED_OBJECTS, true);
+        
         mapper.registerModule(hibernate5Module);
         
         // Disable failing on empty beans and writing dates as timestamps

@@ -155,6 +155,10 @@ public class PrescriptionController {
             logger.info("Fetching prescriptions for patient ID: {}", patientId);
             List<Prescription> prescriptions = prescriptionRepository.findByPatientIdOrderByCreatedAtDesc(patientId);
             logger.info("Found {} prescriptions for patient ID: {}", prescriptions.size(), patientId);
+            
+            // Initialize associations for serialization
+            prescriptions.forEach(this::initializePrescriptionAssociations);
+            
             return ResponseEntity.ok(prescriptions);
         } catch (Exception e) {
             logger.error("Error fetching patient prescriptions: ", e);
@@ -172,6 +176,10 @@ public class PrescriptionController {
             logger.info("Fetching prescriptions for doctor ID: {}", doctorId);
             List<Prescription> prescriptions = prescriptionRepository.findByDoctorIdOrderByCreatedAtDesc(doctorId);
             logger.info("Found {} prescriptions for doctor ID: {}", prescriptions.size(), doctorId);
+            
+            // Initialize associations for serialization
+            prescriptions.forEach(this::initializePrescriptionAssociations);
+            
             return ResponseEntity.ok(prescriptions);
         } catch (Exception e) {
             logger.error("Error fetching doctor prescriptions: ", e);
@@ -187,10 +195,15 @@ public class PrescriptionController {
     public ResponseEntity<Prescription> getPrescriptionById(@PathVariable Long prescriptionId) {
         try {
             logger.info("Fetching prescription with ID: {}", prescriptionId);
-            Optional<Prescription> prescriptionOpt = prescriptionRepository.findById(prescriptionId);
+            Optional<Prescription> prescriptionOpt = prescriptionRepository.findByIdWithDetails(prescriptionId);
             
             if (prescriptionOpt.isPresent()) {
-                return ResponseEntity.ok(prescriptionOpt.get());
+                Prescription prescription = prescriptionOpt.get();
+                
+                // Initialize associations for serialization
+                initializePrescriptionAssociations(prescription);
+                
+                return ResponseEntity.ok(prescription);
             } else {
                 logger.warn("Prescription not found with ID: {}", prescriptionId);
                 return ResponseEntity.notFound().build();
@@ -211,6 +224,10 @@ public class PrescriptionController {
             logger.info("Fetching prescriptions for appointment ID: {}", appointmentId);
             List<Prescription> prescriptions = prescriptionRepository.findByAppointmentId(appointmentId);
             logger.info("Found {} prescriptions for appointment", prescriptions.size());
+            
+            // Initialize associations for serialization
+            prescriptions.forEach(this::initializePrescriptionAssociations);
+            
             return ResponseEntity.ok(prescriptions);
         } catch (Exception e) {
             logger.error("Error fetching appointment prescriptions: ", e);
@@ -255,6 +272,39 @@ public class PrescriptionController {
         } catch (Exception e) {
             logger.error("Error updating prescription: ", e);
             return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    /**
+     * Helper method to initialize lazy-loaded associations for proper serialization
+     */
+    private void initializePrescriptionAssociations(Prescription prescription) {
+        if (prescription.getDoctor() != null) {
+            // Force initialization of important doctor fields
+            String doctorFirstName = prescription.getDoctor().getFirstName();
+            String doctorLastName = prescription.getDoctor().getLastName();
+            
+            // Log if doctor data is incomplete
+            if (doctorFirstName == null || doctorFirstName.isEmpty() || 
+                doctorLastName == null || doctorLastName.isEmpty()) {
+                logger.warn("Doctor data is incomplete for prescription ID: {}", prescription.getId());
+            }
+        } else {
+            logger.warn("Doctor is null for prescription ID: {}", prescription.getId());
+        }
+        
+        if (prescription.getPatient() != null) {
+            // Force initialization of important patient fields
+            String patientFirstName = prescription.getPatient().getFirstName();
+            String patientLastName = prescription.getPatient().getLastName();
+            
+            // Log if patient data is incomplete
+            if (patientFirstName == null || patientFirstName.isEmpty() || 
+                patientLastName == null || patientLastName.isEmpty()) {
+                logger.warn("Patient data is incomplete for prescription ID: {}", prescription.getId());
+            }
+        } else {
+            logger.warn("Patient is null for prescription ID: {}", prescription.getId());
         }
     }
 
