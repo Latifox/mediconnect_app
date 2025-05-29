@@ -208,8 +208,11 @@ public class PrescriptionController {
         private Long patientId;
         private Long appointmentId;
         private String medications;
+        private String dosage;
         private String instructions;
         private String diagnosis;
+        private String validUntil;
+        private String notes;
 
         // Getters and setters
         public Long getPatientId() { return patientId; }
@@ -221,11 +224,20 @@ public class PrescriptionController {
         public String getMedications() { return medications; }
         public void setMedications(String medications) { this.medications = medications; }
         
+        public String getDosage() { return dosage; }
+        public void setDosage(String dosage) { this.dosage = dosage; }
+        
         public String getInstructions() { return instructions; }
         public void setInstructions(String instructions) { this.instructions = instructions; }
         
         public String getDiagnosis() { return diagnosis; }
         public void setDiagnosis(String diagnosis) { this.diagnosis = diagnosis; }
+        
+        public String getValidUntil() { return validUntil; }
+        public void setValidUntil(String validUntil) { this.validUntil = validUntil; }
+        
+        public String getNotes() { return notes; }
+        public void setNotes(String notes) { this.notes = notes; }
     }
 
     public static class UpdatePrescriptionRequest {
