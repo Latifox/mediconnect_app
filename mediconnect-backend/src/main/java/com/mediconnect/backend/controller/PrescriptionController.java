@@ -16,6 +16,9 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Optional;
 
@@ -67,8 +70,60 @@ public class PrescriptionController {
             prescription.setDoctor(doctor);
             prescription.setPatient(patient);
             prescription.setMedications(request.getMedications());
+            prescription.setDosage(request.getDosage());
             prescription.setInstructions(request.getInstructions());
             prescription.setDiagnosis(request.getDiagnosis());
+            prescription.setNotes(request.getNotes());
+            
+            // Handle validUntil date conversion
+            if (request.getValidUntil() != null && !request.getValidUntil().isEmpty()) {
+                try {
+                    // Try different date formats
+                    LocalDateTime validUntil = null;
+                    
+                    try {
+                        // Try ISO format: 2023-12-31
+                        LocalDate date = LocalDate.parse(request.getValidUntil());
+                        validUntil = date.atTime(23, 59, 59);
+                    } catch (DateTimeParseException e1) {
+                        try {
+                            // Try ISO datetime format: 2023-12-31T00:00:00
+                            validUntil = LocalDateTime.parse(request.getValidUntil());
+                        } catch (DateTimeParseException e2) {
+                            // Try other common formats
+                            String[] patterns = {
+                                "yyyy-MM-dd",
+                                "MM/dd/yyyy",
+                                "dd/MM/yyyy",
+                                "MM-dd-yyyy",
+                                "dd-MM-yyyy"
+                            };
+                            
+                            for (String pattern : patterns) {
+                                try {
+                                    DateTimeFormatter formatter = DateTimeFormatter.ofPattern(pattern);
+                                    LocalDate date = LocalDate.parse(request.getValidUntil(), formatter);
+                                    validUntil = date.atTime(23, 59, 59);
+                                    break;
+                                } catch (DateTimeParseException e) {
+                                    // Continue to the next pattern
+                                }
+                            }
+                        }
+                    }
+                    
+                    if (validUntil != null) {
+                        prescription.setValidUntil(validUntil);
+                    } else {
+                        logger.warn("Could not parse validUntil date: {}", request.getValidUntil());
+                    }
+                } catch (Exception e) {
+                    logger.warn("Error parsing validUntil date: {}", e.getMessage());
+                    // Continue without setting validUntil
+                }
+            }
+            
+            prescription.setPrescribedDate(LocalDateTime.now());
             prescription.setCreatedAt(LocalDateTime.now());
             prescription.setUpdatedAt(LocalDateTime.now());
             
