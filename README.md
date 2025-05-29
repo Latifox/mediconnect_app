@@ -3,6 +3,17 @@
 ## 🏥 Overview
 MediConnect is a comprehensive telemedicine platform that enables video consultations between patients and doctors. The platform consists of a Spring Boot backend API and a React Native mobile application, providing a complete solution for remote healthcare services.
 
+## 🚀 One-Click Deployment
+[![Deploy to DigitalOcean](https://www.deploytodo.com/do-btn-blue.svg)](https://cloud.digitalocean.com/apps/new?repo=https://github.com/latifox/mediconnect_app/tree/main)
+
+Deploy MediConnect with a single click using DigitalOcean App Platform. This will automatically set up:
+- Backend Spring Boot API
+- Frontend Expo application
+- PostgreSQL database
+- All necessary environment variables
+
+*Note: You'll need a DigitalOcean account. Sign up [here](https://www.digitalocean.com/try/free-trial-offer) for a $200 free credit.*
+
 ## 🚀 Features
 
 ### For Patients
@@ -189,19 +200,31 @@ npm test
 
 ## 🚀 Deployment
 
+### One-Click Cloud Deployment
+[![Deploy to DigitalOcean](https://www.deploytodo.com/do-btn-blue.svg)](https://cloud.digitalocean.com/apps/new?repo=https://github.com/latifox/mediconnect_app/tree/main)
+
+For detailed DigitalOcean deployment instructions, see [DIGITAL_OCEAN_DEPLOYMENT.md](DIGITAL_OCEAN_DEPLOYMENT.md).
+
+### Docker Deployment
+```bash
+# Build and start containers
+docker-compose up -d
+```
+
 ### Backend Deployment
 ```bash
 # Build JAR file
 mvn clean package
 
 # Run with Docker
-docker build -t mediconnect-backend .
+docker build -t mediconnect-backend ./mediconnect-backend
 docker run -p 8080:8080 mediconnect-backend
 ```
 
 ### Frontend Deployment
 ```bash
 # Build for production
+cd mediconnect-frontend
 expo build:android
 expo build:ios
 
