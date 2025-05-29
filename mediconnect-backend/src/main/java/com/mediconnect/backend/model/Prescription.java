@@ -1,5 +1,6 @@
 package com.mediconnect.backend.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -16,14 +17,17 @@ public class Prescription {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "doctor_id", nullable = false)
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "password", "medicalHistory", "appointments", "prescriptions", "messagesSent", "messagesReceived"})
     private User doctor;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "patient_id", nullable = false)
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "password", "medicalHistory", "appointments", "prescriptions", "messagesSent", "messagesReceived"})
     private User patient;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "appointment_id")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "doctor", "patient", "prescriptions", "messages"})
     private Appointment appointment;
 
     @NotBlank
