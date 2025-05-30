@@ -303,14 +303,14 @@ For support and questions:
 - [x] Basic messaging functionality
 
 ### Phase 2 (In Progress)
-- [ ] Video consultation implementation
-- [ ] Prescription management
+- [x] Video consultation implementation
+- [x] Prescription management
 - [ ] File upload/sharing
 - [ ] Push notifications
 
 ### Phase 3 (Planned)
 - [ ] Payment integration
-- [ ] Advanced search filters
+- [x] Advanced search filters
 - [ ] Multi-language support
 - [ ] Offline capabilities
 - [ ] Analytics dashboard
