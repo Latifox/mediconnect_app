@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MediConnect - Documentation WebRTC</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 {
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #2c3e50;
+            margin-top: 30px;
+        }
+        h3 {
+            color: #3498db;
+        }
+        code {
+            background-color: #f8f8f8;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-family: 'Courier New', Courier, monospace;
+        }
+        pre {
+            background-color: #f8f8f8;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        th, td {
+            padding: 10px;
+            border: 1px solid #ddd;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .note {
+            background-color: #e7f4ff;
+            padding: 15px;
+            border-left: 4px solid #3498db;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>MediConnect - Documentation WebRTC</h1>
+    
+    <p>Cette documentation décrit l'API WebRTC de MediConnect pour l'intégration des appels vidéo et audio dans l'application.</p>
+    
+    <div class="note">
+        <strong>Note :</strong> L'API WebRTC utilise Socket.IO pour la signalisation. Vous devrez inclure la bibliothèque Socket.IO dans votre application cliente.
+    </div>
+    
+    <h2>1. Connexion au serveur WebSocket</h2>
+    
+    <p>Avant de pouvoir participer à un appel, vous devez établir une connexion WebSocket avec le serveur de signalisation.</p>
+    
+    <h3>URL de connexion</h3>
+    <pre><code>ws://[SERVER_HOST]:[SERVER_PORT]?userId=[USER_ID]</code></pre>
+    
+    <p>Vous pouvez obtenir les détails de connexion pour un rendez-vous spécifique en appelant le point d'API REST suivant :</p>
+    <pre><code>GET /api/calls/connection-details/{appointmentId}</code></pre>
+    
+    <h3>Exemple avec Socket.IO</h3>
+    <pre><code>// Récupérer d'abord les détails de connexion
+fetch('/api/calls/connection-details/' + appointmentId, {
+  headers: {
+    'Authorization': 'Bearer ' + jwtToken
+  }
+})
+.then(response => response.json())
+.then(details => {
+  // Connecter au serveur Socket.IO
+  const socket = io(details.socketServerUrl, {
+    query: {
+      userId: currentUserId
+    }
+  });
+  
+  // Gérer les événements de connexion
+  socket.on('connect', () => {
+    console.log('Connecté au serveur de signalisation');
+  });
+});</code></pre>
+
+    <h2>2. Rejoindre un appel</h2>
+    
+    <p>Une fois connecté au serveur WebSocket, vous pouvez rejoindre un appel pour un rendez-vous spécifique.</p>
+    
+    <h3>Événement: join-call</h3>
+    <pre><code>socket.emit('join-call', {
+  userId: currentUserId,
+  appointmentId: appointmentId
+});</code></pre>
+    
+    <h3>Réponse: call-joined</h3>
+    <pre><code>socket.on('call-joined', (response) => {
+  const { appointmentId, peerExists } = response;
+  
+  if (peerExists) {
+    // L'autre participant est déjà dans l'appel
+    // Initier l'échange WebRTC en créant une offre
+    createAndSendOffer();
+  } else {
+    // Vous êtes le premier participant
+    // Attendre que l'autre participant rejoigne
+  }
+});</code></pre>
+
+    <h3>Événement: user-joined</h3>
+    <pre><code>socket.on('user-joined', (data) => {
+  const { userId, appointmentId } = data;
+  // Un autre utilisateur a rejoint l'appel
+  // Si vous êtes déjà dans l'appel, vous recevrez cet événement
+});</code></pre>
+
+    <h2>3. Signalisation WebRTC</h2>
+    
+    <p>Pour établir une connexion WebRTC entre les participants, vous devez échanger des messages de signalisation.</p>
+    
+    <h3>Envoyer un signal WebRTC</h3>
+    <pre><code>socket.emit('webrtc-signal', {
+  type: 'offer', // ou 'answer', 'ice-candidate'
+  data: rtcData, // Les données de l'offre, de la réponse ou du candidat ICE
+  senderId: currentUserId,
+  receiverId: otherUserId, // L'ID de l'autre participant
+  appointmentId: appointmentId
+});</code></pre>
+    
+    <h3>Recevoir un signal WebRTC</h3>
+    <pre><code>socket.on('webrtc-signal', (data) => {
+  const { type, data: rtcData, senderId } = data;
+  
+  switch (type) {
+    case 'offer':
+      handleOffer(rtcData, senderId);
+      break;
+    case 'answer':
+      handleAnswer(rtcData);
+      break;
+    case 'ice-candidate':
+      handleIceCandidate(rtcData);
+      break;
+  }
+});</code></pre>
+
+    <h2>4. Contrôler les flux médias</h2>
+    
+    <p>Vous pouvez activer ou désactiver les flux audio et vidéo pendant l'appel.</p>
+    
+    <h3>Basculer l'état d'un média</h3>
+    <pre><code>socket.emit('toggle-media', {
+  userId: currentUserId,
+  appointmentId: appointmentId,
+  mediaType: 'video', // ou 'audio'
+  enabled: false // true pour activer, false pour désactiver
+});</code></pre>
+    
+    <h3>Être notifié du changement d'état d'un média</h3>
+    <pre><code>socket.on('media-toggled', (data) => {
+  const { userId, appointmentId, mediaType, enabled } = data;
+  // Mettre à jour l'interface utilisateur pour refléter le changement
+});</code></pre>
+
+    <h2>5. Quitter un appel</h2>
+    
+    <p>Lorsque vous avez terminé l'appel, vous devez informer le serveur et l'autre participant.</p>
+    
+    <h3>Événement: leave-call</h3>
+    <pre><code>socket.emit('leave-call', {
+  userId: currentUserId,
+  appointmentId: appointmentId
+});</code></pre>
+    
+    <h3>Événement: user-left</h3>
+    <pre><code>socket.on('user-left', (data) => {
+  const { userId, appointmentId } = data;
+  // L'autre participant a quitté l'appel
+  // Nettoyer les ressources WebRTC
+});</code></pre>
+
+    <h2>6. Déconnexion</h2>
+    
+    <p>Lorsque vous fermez l'application, vous devez vous déconnecter proprement du serveur WebSocket.</p>
+    
+    <pre><code>socket.disconnect();</code></pre>
+    
+    <h2>7. Enregistrement des métriques d'appel</h2>
+    
+    <p>Après un appel, vous pouvez enregistrer des métriques pour analyser la qualité.</p>
+    
+    <pre><code>fetch('/api/calls/' + appointmentId + '/record-metrics', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': 'Bearer ' + jwtToken
+  },
+  body: JSON.stringify({
+    duration: callDurationInSeconds,
+    audioQuality: 4, // Note de 1 à 5
+    videoQuality: 4, // Note de 1 à 5
+    callType: 'VIDEO', // 'VIDEO' ou 'AUDIO'
+    technicalIssues: false
+  })
+});</code></pre>
+
+    <h2>8. Référence des événements WebSocket</h2>
+    
+    <table>
+        <tr>
+            <th>Événement</th>
+            <th>Direction</th>
+            <th>Données</th>
+            <th>Description</th>
+        </tr>
+        <tr>
+            <td>join-call</td>
+            <td>Client → Serveur</td>
+            <td>userId, appointmentId</td>
+            <td>Rejoindre un appel</td>
+        </tr>
+        <tr>
+            <td>call-joined</td>
+            <td>Serveur → Client</td>
+            <td>appointmentId, peerExists</td>
+            <td>Confirmation que vous avez rejoint l'appel</td>
+        </tr>
+        <tr>
+            <td>user-joined</td>
+            <td>Serveur → Client</td>
+            <td>userId, appointmentId</td>
+            <td>Notification qu'un autre utilisateur a rejoint</td>
+        </tr>
+        <tr>
+            <td>webrtc-signal</td>
+            <td>Bidirectionnel</td>
+            <td>type, data, senderId, receiverId, appointmentId</td>
+            <td>Échange de signaux WebRTC</td>
+        </tr>
+        <tr>
+            <td>toggle-media</td>
+            <td>Client → Serveur</td>
+            <td>userId, appointmentId, mediaType, enabled</td>
+            <td>Activer/désactiver audio ou vidéo</td>
+        </tr>
+        <tr>
+            <td>media-toggled</td>
+            <td>Serveur → Client</td>
+            <td>userId, appointmentId, mediaType, enabled</td>
+            <td>Notification de changement d'état média</td>
+        </tr>
+        <tr>
+            <td>leave-call</td>
+            <td>Client → Serveur</td>
+            <td>userId, appointmentId</td>
+            <td>Quitter un appel</td>
+        </tr>
+        <tr>
+            <td>user-left</td>
+            <td>Serveur → Client</td>
+            <td>userId, appointmentId</td>
+            <td>Notification qu'un utilisateur a quitté</td>
+        </tr>
+        <tr>
+            <td>error</td>
+            <td>Serveur → Client</td>
+            <td>message</td>
+            <td>Notification d'erreur</td>
+        </tr>
+    </table>
+
+    <h2>9. Exemples d'implémentation</h2>
+    
+    <p>Pour des exemples d'implémentation plus détaillés, consultez la documentation complète sur <a href="https://github.com/mediconnect/mediconnect-app">GitHub</a>.</p>
+</body>
+</html> 
